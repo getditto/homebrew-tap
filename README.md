@@ -9,11 +9,11 @@ is named `getditto/tap`, its GitHub repository is `getditto/homebrew-tap`, and t
 CLI formula is `dittosh`. The command is `dittosh`, to avoid colliding with the
 macOS `ditto` utility.
 
-> **First-release availability:** adding the tap works once this setup is merged.
-> Installing `dittosh` also requires the first stable CLI release to publish
-> `@dittolive/cli` to npm and add `Formula/dittosh.rb` to this repository's `main`
-> branch. Until then, Homebrew will report that the formula is unavailable.
-> See [maintainer setup](#maintainer-setup) for the remaining steps.
+The formula downloads a versioned CLI archive from
+[GitHub Releases](https://github.com/getditto/ditto-cli/releases) and verifies its
+SHA-256 checksum. Publishing the CLI to npm is not required. Homebrew uses npm
+internally to install the archive and its public dependencies; users do not need
+an npm account or publishing credentials.
 
 ## Supported systems
 
@@ -26,8 +26,9 @@ Install [Homebrew](https://brew.sh/) first and follow its instructions for addin
 `brew` to your shell's PATH. The formula manages its own Node.js 24 dependency;
 you do not need a separate npm installation or an npm account.
 
-Intel Macs are not supported by the CLI's current native Ditto SDK. Native
-Windows installations use npm; see the [CLI installation instructions](https://github.com/getditto/ditto-cli#readme).
+Intel Macs are not supported by the CLI's current native Ditto SDK. This tap
+does not support native Windows. The initial distribution is for Homebrew testing;
+installation from the npm registry is deferred.
 
 ## Install
 
@@ -103,7 +104,7 @@ CLI's documented commands to manage those separately.
 | Symptom | What to check |
 | --- | --- |
 | `brew: command not found` | Follow Homebrew's shell setup instructions and open a new terminal. |
-| Formula unavailable | Run `brew update` and check whether `Formula/dittosh.rb` exists on this repository's `main` branch. Before the first release, adding the tap alone does not make the CLI installable. |
+| Formula unavailable | Run `brew update` and check that `Formula/dittosh.rb` is present on this repository's `main` branch. |
 | Old version or wrong install channel | Run `command -v dittosh` and `dittosh version`; check for an npm installation earlier on PATH. |
 | Unsupported platform | Check the architecture table above. The current native SDK does not support Intel Macs. |
 | Offline-license expiry | Update the CLI. If the latest version also reports expiry, report it to the CLI maintainers; the license is embedded during release. |
@@ -114,39 +115,44 @@ open an issue in [ditto-cli](https://github.com/getditto/ditto-cli/issues).
 Include your OS/architecture, `brew --version`, `brew info getditto/tap/dittosh`,
 and the error. Remove credentials and private data before sharing output.
 
-## Maintainer setup
+## Maintaining releases
 
-The release publisher is maintained in **`getditto/ditto-cli`**, not in this tap.
-The proposed [release workflow](https://github.com/getditto/ditto-cli/pull/7)
-tests and publishes the npm package and GitHub release, then writes a generated
-`Formula/dittosh.rb` here using the same npm tarball and SHA-256 checksum.
+CLI builds and release notes belong in **`getditto/ditto-cli`**. This tap contains
+only the formula and its maintenance documentation. The initial `v0.1.0` Homebrew
+release uses the tested `dittolive-cli-0.1.0.tgz` GitHub release asset, without
+publishing `@dittolive/cli` to npm.
 
-Before the first release:
+For this GitHub-only release path:
 
-1. Merge this PR to establish the tap's documentation and validation workflow.
-2. Merge the CLI release workflow and its required CLI changes. Follow its
-   [publishing runbook](https://github.com/getditto/ditto-cli/blob/3345ec0e58e473bfd1822733aa861cfa215f7eea/docs/publishing.md)
-   for npm publishing and the dedicated offline-license secrets.
-3. Give the CLI publisher a fine-grained GitHub token with **Contents: read and
-   write** for **this repository only**. Store it as the `HOMEBREW_TAP_TOKEN`
-   repository secret in **`getditto/ditto-cli`**. Configure any required organization
-   authorization and branch-rule permissions. No npm token belongs in this tap.
-4. Use the CLI publisher's default `getditto/homebrew-tap`, or set its
-   `HOMEBREW_TAP_REPOSITORY` variable to that value explicitly. Its current
-   publisher commits directly to the tap's default branch; rules must allow the
-   publishing identity to do this, or the publisher must be changed to open PRs.
-5. Release the CLI from a reviewed version tag. Confirm the generated formula is
-   present on `main`, this tap's formula checks pass, and installation works on
-   a supported system. Then remove the first-release notice above.
+1. Run the CLI's Release workflow with `homebrew-test=true`. The bootstrap mode in
+   [CLI PR #8](https://github.com/getditto/ditto-cli/pull/8) is pinned to the reviewed
+   `v0.1.0` source commit. It builds using the CLI repository's dedicated
+   offline-license and database-ID secrets, then runs coverage, end-to-end tests,
+   and real Homebrew installation checks on all supported platforms.
+2. After those checks pass, the workflow publishes the exact tested archive,
+   `SHA256SUMS`, and a `dittosh.rb` that points at the GitHub release asset. It uses
+   GitHub's automatically issued repository token; no npm package is published.
+3. Copy that release's `dittosh.rb` into a PR here. Require the tap's macOS and
+   Linux installation checks and normal review before merging. Users receive the
+   new version through `brew update` and `brew upgrade` after it merges.
 
-Do not add a placeholder formula, guessed checksum, or an unpublished download
-URL to make the tap appear ready. The first real formula comes from the release
-publisher after npm publication. The tap does not build or publish the CLI itself.
+This path needs **no `NPM_TOKEN` or `HOMEBREW_TAP_TOKEN` secret**. The tap's CI is
+read-only and uses public downloads. Normal GitHub review permissions still apply
+when a maintainer merges a formula PR.
 
-For subsequent releases, the CLI publisher updates the stable formula; users
-receive it through `brew update` and `brew upgrade`. Prereleases do not replace
-the stable formula. AI agents and human contributors should read
-[AGENTS.md](AGENTS.md) before making maintenance changes.
+The bootstrap mode is deliberately limited to `v0.1.0`. It rejects a tag that
+points at another commit and refuses to overwrite an already published release.
+Future release automation should be agreed separately. The CLI's original tag-push
+workflow still includes npm publishing and cross-repository tap updates; that
+combined path is not used for this Homebrew test. Do not enable it or request
+publishing tokens merely to update this tap.
+
+Do not add placeholder versions, guessed checksums, or unpublished download URLs.
+Never replace an existing release archive with different bytes. For a changed
+build, publish a new CLI version and update the formula through another PR.
+
+AI agents and human contributors should read [AGENTS.md](AGENTS.md) before making
+maintenance changes.
 
 References: [Homebrew taps](https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap)
 and [Node.js formula guidance](https://docs.brew.sh/Language-Specific-Formulae#nodejs).
