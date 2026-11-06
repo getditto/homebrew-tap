@@ -56,10 +56,12 @@ jobs:
         with:
           persist-credentials: false
       - uses: Homebrew/actions/setup-homebrew@c262868c096d909fc278daa87ed9772967331ea3
+        with:
+          stable: true
       - name: Validate formula syntax
         run: ruby -c Formula/dittosh.rb
-      - name: Tap the checked-out revision
-        run: brew tap getditto/tap "$GITHUB_WORKSPACE"
+      - name: Verify the action installed this revision as the tap
+        run: test "$(git -C "$(brew --repo getditto/tap)" rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Install the published package
         run: brew install --formula getditto/tap/dittosh
       - name: Exercise offline DQL
