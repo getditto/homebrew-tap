@@ -1,0 +1,76 @@
+name: Validate tap
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tap-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inspect:
+    name: Inspect tap
+    runs-on: ubuntu-24.04
+    outputs:
+      formula: ${{ steps.formula.outputs.present }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect the first published formula
+        id: formula
+        run: |
+          if test -f Formula/dittosh.rb; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            if test -n "$(git log -1 --format=%H -- Formula/dittosh.rb)"; then
+              echo "::error::The published formula was removed; refusing to skip installation checks."
+              exit 1
+            fi
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "Bootstrap tap: Formula/dittosh.rb has not been published. Installation was not tested." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  install:
+    name: Install and test (${{ matrix.os }})
+    needs: inspect
+    if: needs.inspect.outputs.formula == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      DITTOSH_NO_UPDATE_CHECK: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Homebrew/actions/setup-homebrew@c262868c096d909fc278daa87ed9772967331ea3
+        with:
+          stable: true
+      - name: Validate formula syntax
+        run: ruby -c Formula/dittosh.rb
+      - name: Verify the action installed this revision as the tap
+        run: test "$(git -C "$(brew --repo getditto/tap)" rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Install the published package
+        run: brew install --formula getditto/tap/dittosh
+      - name: Exercise offline DQL
+        run: brew test getditto/tap/dittosh
+      - name: Verify Homebrew update-channel detection
+        shell: bash
+        run: |
+          cli="$(brew --prefix getditto/tap/dittosh)/bin/dittosh"
+          "$cli" version --format json | ruby -rjson -e '
+            info = JSON.parse(STDIN.read)
+            abort "Expected Homebrew install channel" unless info.fetch("channel").start_with?("homebrew ")
+          '
