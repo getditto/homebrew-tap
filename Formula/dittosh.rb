@@ -4,7 +4,7 @@ class Dittosh < Formula
   homepage "https://github.com/getditto/ditto-cli"
   url "https://github.com/getditto/ditto-cli/releases/download/v0.3.0/dittolive-cli-0.3.0.tgz"
   version "0.3.0"
-  sha256 "c416b306580df3b979b393106b6390835b6ab1f9c7c5b19df293b0d85ebc8291"
+  sha256 "b40fa7e45eede4ef5b89e0731b9f2c2a16bf99e2ff63058bcee0a98b8c41c34e"
   license "MIT"
 
   depends_on "node@24"
