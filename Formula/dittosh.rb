@@ -2,9 +2,9 @@
 class Dittosh < Formula
   desc "Ditto CLI for offline DQL, sample datasets, and AI agent skills"
   homepage "https://github.com/getditto/ditto-cli"
-  url "https://github.com/getditto/ditto-cli/releases/download/v0.2.0/dittolive-cli-0.2.0.tgz"
-  version "0.2.0"
-  sha256 "9f96e57e78ade2aed143a656b01eb3add6882311ea611a22f5930da936d9c400"
+  url "https://github.com/getditto/ditto-cli/releases/download/v0.3.0/dittolive-cli-0.3.0.tgz"
+  version "0.3.0"
+  sha256 "c416b306580df3b979b393106b6390835b6ab1f9c7c5b19df293b0d85ebc8291"
   license "MIT"
 
   depends_on "node@24"
